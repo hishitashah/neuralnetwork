@@ -122,38 +122,69 @@ class NeuralNet:
         self.y_test = y_test.to_numpy()
         return 0
 
-    # TODO: Train and evaluate models for all combinations of parameters
-    # specified in the init method. We would like to obtain following outputs:
-    #   1. Training Accuracy and Error (Loss) for every model
-    #   2. Test Accuracy and Error (Loss) for every model
-    #   3. History Curve (Plot of Accuracy against training steps) for all
-    #       the models in a single plot. The plot should be color coded i.e.
-    #       different color for each model
-
+    # Train and evaluate models for all combinations of hyperparameters.
+    # Outputs:
+    #   1. Training accuracy and error (MSE, log-loss) for every model
+    #   2. Test accuracy and error (MSE, log-loss) for every model
+    #   3. History curves (accuracy / MSE vs epoch) for all models
     def train_evaluate(self):
-        ncols = len(self.processed_data.columns)
-        nrows = len(self.processed_data.index)
-        X = self.processed_data.iloc[:, 0:(ncols - 1)]
-        y = self.processed_data.iloc[:, (ncols-1)]
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y)
+        # Standardized train/test sets from preprocess
+        data = (self.X_train, self.y_train, self.X_test, self.y_test)
 
         # Below are the hyperparameters that you need to use for model evaluation
-        # You can assume any fixed number of neurons for each hidden layer. 
-        
+        # You can assume any fixed number of neurons for each hidden layer.
         activations = ['logistic', 'tanh', 'relu']
         learning_rate = [0.01, 0.1]
-        max_iterations = [100, 200] # also known as epochs
+        max_iterations = [100, 200]  # also known as epochs
         num_hidden_layers = [2, 3]
 
-        # Create the neural network and be sure to keep track of the performance
-        #   metrics
+        rows = []
+        self.histories = {}
+        for act, lr, epochs, n_layers in itertools.product(
+                activations, learning_rate, max_iterations, num_hidden_layers):
+            history = self.train_model(act, lr, epochs, n_layers, data)
+            self.histories[(act, lr, epochs, n_layers)] = history
+            rows.append({
+                'Activation': act,
+                'Learning Rate': lr,
+                'Epochs': epochs,
+                'Hidden Layers': n_layers,
+                'Neurons/Layer': self.neurons,
+                'Train Acc': history['train_acc'][-1],
+                'Test Acc': history['test_acc'][-1],
+                'Train MSE': history['train_mse'][-1],
+                'Test MSE': history['test_mse'][-1],
+                'Train LogLoss': history['train_logloss'][-1],
+                'Test LogLoss': history['test_logloss'][-1],
+            })
 
-        # Plot the model history for each model in a single plot
-        # model history is a plot of accuracy vs number of epochs
-        # you may want to create a large sized plot to show multiple lines
-        # in a same figure.
+        results = (pd.DataFrame(rows)
+                   .sort_values(['Test Acc', 'Test MSE'], ascending=[False, True])
+                   .reset_index(drop=True))
+        self.results = results
 
+        os.makedirs(self.out_dir, exist_ok=True)
+        results.to_csv(os.path.join(self.out_dir, "results.csv"), index=False)
+        with open(os.path.join(self.out_dir, "results.md"), "w") as f:
+            f.write(results.to_markdown(index=False, floatfmt=".4f"))
+            f.write("\n")
+
+        pd.set_option('display.width', 200)
+        print("\nResults (sorted by test accuracy):")
+        print(results.to_string(index=False, float_format=lambda v: f"{v:.4f}"))
+
+        best = results.iloc[0]
+        print(f"\nBest model: activation={best['Activation']}, "
+              f"lr={best['Learning Rate']}, epochs={best['Epochs']}, "
+              f"hidden layers={best['Hidden Layers']} -> "
+              f"test acc {best['Test Acc']:.4f}, test MSE {best['Test MSE']:.4f}")
+        for col in ['Activation', 'Learning Rate', 'Epochs', 'Hidden Layers']:
+            print(f"\nMean test accuracy by {col}:")
+            print(results.groupby(col)['Test Acc'].mean().round(4).to_string())
+
+        # Plot the model history for each model
+        self.plots(activations, learning_rate, max_iterations,
+                             num_hidden_layers)
         return 0
 
     # Train one network one epoch at a time and record its history.
@@ -231,7 +262,6 @@ class NeuralNet:
             print(f"Saved {path}")
 
 
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Neural network hyperparameter analysis")
     parser.add_argument("--data", default=DEFAULT_DATA_URL,
@@ -240,5 +270,4 @@ if __name__ == "__main__":
 
     neural_network = NeuralNet(args.data, header=False)
     neural_network.preprocess()
-    # TODO: enable once train_evaluate is implemented
-    # neural_network.train_evaluate()
+    neural_network.train_evaluate()
