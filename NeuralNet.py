@@ -10,8 +10,13 @@
 
 
 import argparse
+import itertools
+import os
 import warnings
 
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from sklearn.exceptions import ConvergenceWarning
@@ -32,6 +37,11 @@ BASE_FEATURES = ['radius', 'texture', 'perimeter', 'area', 'smoothness',
 COLUMN_NAMES = ['ID', 'Diagnosis'] + [f"{f}_{stat}"
                                       for stat in ('mean', 'se', 'worst')
                                       for f in BASE_FEATURES]
+
+# Plot colors (one per learning-rate x hidden-layer combination) and ink
+SERIES_COLORS = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100']
+INK_SECONDARY = '#52514e'
+GRID_COLOR = '#e1e0d9'
 
 
 class NeuralNet:
@@ -173,6 +183,53 @@ class NeuralNet:
         print(f"Trained act={activation:<8} lr={lr:<4} epochs={epochs:<3} "
               f"layers={n_layers}: test acc {history['test_acc'][-1]:.4f}")
         return history
+
+    # One figure per metric: rows are train / test, columns are activations.
+    # Within a panel, color = (learning rate, hidden layers) and line style =
+    # epochs, so each of the 24 models has a unique color + style.
+    def plots(self, activations, learning_rates, epochs_list,
+                        layers_list):
+        combos = list(itertools.product(learning_rates, layers_list))
+        color_of = {c: SERIES_COLORS[i] for i, c in enumerate(combos)}
+        style_of = {epochs_list[0]: (0, (4, 2)), epochs_list[-1]: '-'}
+
+        for metric, ylabel in (('acc', 'Accuracy'), ('mse', 'MSE')):
+            fig, axes = plt.subplots(2, len(activations), figsize=(16, 9),
+                                     sharex=True, sharey=True)
+            for row, split in enumerate(('train', 'test')):
+                for col, act in enumerate(activations):
+                    ax = axes[row, col]
+                    # Draw longer runs first so shorter runs sit on top
+                    for epochs in sorted(epochs_list, reverse=True):
+                        for lr, n_layers in combos:
+                            values = self.histories[(act, lr, epochs, n_layers)][f'{split}_{metric}']
+                            ax.plot(range(1, len(values) + 1), values,
+                                    color=color_of[(lr, n_layers)],
+                                    linestyle=style_of[epochs], linewidth=2,
+                                    label=f"lr={lr}, layers={n_layers}, epochs={epochs}")
+                            ax.plot(len(values), values[-1], marker='o',
+                                    markersize=5, color=color_of[(lr, n_layers)])
+                    ax.set_title(f"{act} ({split})", fontsize=12)
+                    ax.grid(True, color=GRID_COLOR, linewidth=0.8)
+                    ax.tick_params(colors=INK_SECONDARY)
+                    for spine in ('top', 'right'):
+                        ax.spines[spine].set_visible(False)
+                    if col == 0:
+                        ax.set_ylabel(f"{split.capitalize()} {ylabel}")
+                    if row == 1:
+                        ax.set_xlabel("Epoch")
+
+            handles, labels = axes[0, 0].get_legend_handles_labels()
+            fig.legend(handles, labels, loc='lower center', ncol=4,
+                       frameon=False, fontsize=10)
+            fig.suptitle(f"Model history: {ylabel} vs epoch for all "
+                         f"{len(self.histories)} models", fontsize=14)
+            fig.tight_layout(rect=(0, 0.08, 1, 0.96))
+            path = os.path.join(self.out_dir, f"history_{metric}.png")
+            fig.savefig(path, dpi=150)
+            plt.close(fig)
+            print(f"Saved {path}")
+
 
 
 if __name__ == "__main__":
