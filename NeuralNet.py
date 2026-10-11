@@ -47,12 +47,43 @@ class NeuralNet:
 
 
 
-    # TODO: Write code for pre-processing the dataset, which would include
-    # standardization, normalization,
-    #   categorical to numerical, etc
+    # Pre-processing: drop ID, integrity checks, null handling, label encoding.
+    # Standardization is done in train_evaluate after the train/test split so
+    # the scaler is fit on training data only (no test-set leakage).
     def preprocess(self):
-        self.processed_data = self.raw_input
+        data = self.raw_input.copy()
 
+        # ID is just a sample identifier, not a predictive feature
+        data = data.drop(columns=['ID'])
+
+        # Integrity: treat '?' / blank strings as missing, force features to numeric
+        data = data.replace(['?', ''], np.nan)
+        feature_cols = [c for c in data.columns if c != 'Diagnosis']
+        data[feature_cols] = data[feature_cols].apply(pd.to_numeric, errors='coerce')
+
+        # Integrity: remove duplicate rows and rows with missing/invalid labels
+        n = len(data)
+        data = data.drop_duplicates()
+        print(f"Duplicate rows removed: {n - len(data)}")
+
+        n = len(data)
+        data['Diagnosis'] = data['Diagnosis'].astype(str).str.strip().str.upper()
+        data = data[data['Diagnosis'].isin(['M', 'B'])]
+        print(f"Rows with missing/invalid label removed: {n - len(data)}")
+
+        # Nulls in features: impute with the column median
+        n_null = int(data[feature_cols].isnull().sum().sum())
+        data[feature_cols] = data[feature_cols].fillna(data[feature_cols].median())
+        print(f"Missing feature values imputed with median: {n_null}")
+
+        # Categorical to numerical: M (malignant) = 1, B (benign) = 0
+        data['Diagnosis'] = data['Diagnosis'].map({'M': 1, 'B': 0})
+
+        # Put the label last, as train_evaluate expects
+        data = data[feature_cols + ['Diagnosis']].reset_index(drop=True)
+
+        self.processed_data = data
+        print(f"Processed data shape: {data.shape}")
         return 0
 
     # TODO: Train and evaluate models for all combinations of parameters
@@ -99,6 +130,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     neural_network = NeuralNet(args.data, header=False)
-    # TODO: enable once preprocess/train_evaluate are implemented
-    # neural_network.preprocess()
+    neural_network.preprocess()
+    # TODO: enable once train_evaluate is implemented
     # neural_network.train_evaluate()

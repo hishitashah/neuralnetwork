@@ -31,6 +31,8 @@ python NeuralNet.py --data path/to/wdbc.data
 - `__main__` reads the data path from the `--data` command-line argument instead of a hardcoded `"train.csv"`.
 - `__init__` now uses the `header` flag (`header=False` for wdbc.data) and assigns the column names.
 - `__init__` prints a quick summary of the loaded data: shape, class counts, and null count.
+- `preprocess` drops `ID`, coerces features to numeric (`?`/blank become NaN), removes duplicates and rows with an invalid label, imputes missing features with the column median, encodes `Diagnosis` as M = 1 / B = 0, and moves it to the last column.
+- Standardization is not done in `preprocess`. It will happen in `train_evaluate`, after the train/test split, with the scaler fit on the training set only to avoid leaking test data.
 
 ## Results
 TODO
