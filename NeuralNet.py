@@ -10,10 +10,14 @@
 
 
 import argparse
+import warnings
 
 import numpy as np
 import pandas as pd
+from sklearn.exceptions import ConvergenceWarning
+from sklearn.metrics import accuracy_score, log_loss, mean_squared_error
 from sklearn.model_selection import train_test_split
+from sklearn.neural_network import MLPClassifier
 from sklearn.preprocessing import StandardScaler
 
 
@@ -142,7 +146,33 @@ class NeuralNet:
 
         return 0
 
+    # Train one network one epoch at a time and record its history.
+    # Plain SGD (no momentum) so the learning rate is the step size eta.
+    def train_model(self, activation, lr, epochs, n_layers, data):
+        X_train, y_train, X_test, y_test = data
+        clf = MLPClassifier(hidden_layer_sizes=(self.neurons,) * n_layers,
+                            activation=activation, solver='sgd',
+                            learning_rate_init=lr, momentum=0.0,
+                            random_state=self.seed)
 
+        history = {k: [] for k in ('train_acc', 'test_acc', 'train_mse',
+                                   'test_mse', 'train_logloss', 'test_logloss')}
+        for _ in range(epochs):
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", ConvergenceWarning)
+                clf.partial_fit(X_train, y_train, classes=[0, 1])
+            for split, X_s, y_s in (('train', X_train, y_train),
+                                    ('test', X_test, y_test)):
+                proba = clf.predict_proba(X_s)[:, 1]
+                history[f'{split}_acc'].append(
+                    accuracy_score(y_s, (proba >= 0.5).astype(int)))
+                history[f'{split}_mse'].append(mean_squared_error(y_s, proba))
+                history[f'{split}_logloss'].append(
+                    log_loss(y_s, proba, labels=[0, 1]))
+
+        print(f"Trained act={activation:<8} lr={lr:<4} epochs={epochs:<3} "
+              f"layers={n_layers}: test acc {history['test_acc'][-1]:.4f}")
+        return history
 
 
 if __name__ == "__main__":
