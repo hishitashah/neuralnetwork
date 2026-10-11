@@ -14,6 +14,7 @@ import argparse
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
 
 
 # Public UCI path for the Breast Cancer Wisconsin (Diagnostic) dataset
@@ -30,7 +31,12 @@ COLUMN_NAMES = ['ID', 'Diagnosis'] + [f"{f}_{stat}"
 
 
 class NeuralNet:
-    def __init__(self, dataFile, header=True):
+    def __init__(self, dataFile, header=True, seed=42, test_size=0.2,
+                 neurons=16, out_dir="results"):
+        self.seed = seed
+        self.test_size = test_size
+        self.neurons = neurons
+        self.out_dir = out_dir
         self.raw_input = pd.read_csv(dataFile, header=0 if header else None)
         if not header:
             if self.raw_input.shape[1] != len(COLUMN_NAMES):
@@ -47,9 +53,10 @@ class NeuralNet:
 
 
 
-    # Pre-processing: drop ID, integrity checks, null handling, label encoding.
-    # Standardization is done in train_evaluate after the train/test split so
-    # the scaler is fit on training data only (no test-set leakage).
+    # Pre-processing: drop ID, integrity checks, null handling, label encoding,
+    # train/test split and standardization. The data is split before
+    # standardizing so the scaler is fit on training data only (no test-set
+    # leakage).
     def preprocess(self):
         data = self.raw_input.copy()
 
@@ -84,6 +91,21 @@ class NeuralNet:
 
         self.processed_data = data
         print(f"Processed data shape: {data.shape}")
+
+        # Stratified, seeded train/test split
+        ncols = len(data.columns)
+        X = data.iloc[:, 0:(ncols - 1)]
+        y = data.iloc[:, (ncols - 1)]
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=self.test_size, stratify=y, random_state=self.seed)
+        print(f"Train size: {len(X_train)}, test size: {len(X_test)}")
+
+        # Standardize with statistics from the training set only
+        scaler = StandardScaler().fit(X_train)
+        self.X_train = scaler.transform(X_train)
+        self.X_test = scaler.transform(X_test)
+        self.y_train = y_train.to_numpy()
+        self.y_test = y_test.to_numpy()
         return 0
 
     # TODO: Train and evaluate models for all combinations of parameters
