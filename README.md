@@ -1,6 +1,6 @@
-# Assignment 2: Neural Networks (Programming Part)
+# Neural Network Project
 
-**Group members:** TODO Name (netid), TODO Name (netid)
+**Group members:** Hishita Shah (hrs220004), Megan Chacko (msc220005)
 
 ## Dataset
 Breast Cancer Wisconsin (Diagnostic), UCI ML Repository:
