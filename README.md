@@ -112,6 +112,7 @@ Note on the dashed (100-epoch) lines: each 100-epoch model uses the same seed as
 
 ## Assumptions
 - **Dataset:** Breast Cancer Wisconsin (Diagnostic) from the UCI repository, read from its public URL. `ID` is dropped because it is a sample identifier, not a feature.
+- **Hyperparameter grid:** the one provided in the starter code's `train_evaluate`: activations `logistic`, `tanh`, `relu`; learning rates 0.01 and 0.1; 100 and 200 epochs; 2 and 3 hidden layers.
 - **Hidden layer width:** 16 neurons in every hidden layer (the template allows any fixed number).
 - **Optimizer:** plain stochastic gradient descent (`solver='sgd'`, `momentum=0`), so the learning rate is the step size η. scikit-learn's defaults otherwise apply (mini-batch size 200, L2 penalty α = 0.0001, constant learning rate).
 - **Epochs:** one epoch is one full pass over the training set, done with one `partial_fit` call. Each model is trained for exactly that many epochs, with no early stopping.
