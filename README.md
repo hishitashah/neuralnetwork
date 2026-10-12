@@ -13,10 +13,23 @@ The code reads the data straight from the public UCI file, so no data is include
 - The file has no header row. The code assigns the column names: `ID`, `Diagnosis`, and `<feature>_{mean,se,worst}` for the 10 base features.
 
 ## Setup
-Requires Python 3.8+.
+Requires Python 3.9 or newer and an internet connection (the dataset is downloaded from the UCI URL at run time).
+
+Install the following packages before running:
+
+| Package | Used for |
+|---|---|
+| `numpy` | numerical arrays |
+| `pandas` | loading and cleaning the data, results table |
+| `scikit-learn` | train/test split, `StandardScaler`, `MLPClassifier`, metrics |
+| `matplotlib` | model history plots |
+| `tabulate` | saving the results table as markdown (`results.md`) |
+
 ```
-pip install -r requirements.txt
+pip install numpy pandas scikit-learn matplotlib tabulate
 ```
+
+Tested with Python 3.14.7, numpy 2.5.4, pandas 3.0.6, scikit-learn 1.9.1, matplotlib 3.11.2 and tabulate 0.10.0.
 
 ## How to run
 ```
@@ -80,39 +93,7 @@ Mean test accuracy for each hyperparameter value:
 | Epochs | 100 → 0.877 · 200 → 0.890 |
 | Hidden layers | 2 → 0.909 · 3 → 0.857 |
 
-### Model history plots
-![Accuracy vs epoch](results/history_acc.png)
-
-![MSE vs epoch](results/history_mse.png)
-
-Note on the dashed (100-epoch) lines: each 100-epoch model uses the same seed as its 200-epoch counterpart, so its curve is identical for the first 100 epochs and lies underneath the solid line. The dot at epoch 100 marks where the 100-epoch model stopped.
-
-## Report
-**Best activation: tanh and relu.** Their mean test accuracies (0.969 and 0.966) are nearly the same, and both reach about 97–98% test accuracy in every configuration. The best test accuracy, 0.9825, is shared by six models, four of them relu with learning rate 0.1. The logistic (sigmoid) activation is far behind with a mean of 0.714. Six of its eight models never learned anything and stayed at 0.6316 test accuracy, which is simply predicting "benign" for every sample (72 of the 114 test samples are benign).
-
-**Why sigmoid did poorly.** The sigmoid derivative is at most 0.25 (at 0), and backpropagation multiplies one such factor per layer, so the gradient reaching the early layers shrinks quickly. This is the vanishing-gradient problem. Sigmoid outputs are also always positive (not zero-centered), which makes weight updates less efficient. tanh has a derivative of 1 at 0 and is zero-centered, and relu has a derivative of 1 for every positive input, so gradients pass through the layers almost undiminished. The history plots show this: the sigmoid curves stay flat at the majority-class accuracy, while tanh and relu climb within the first 10–25 epochs. The only sigmoid models that escaped the plateau used the larger learning rate *and* only 2 layers (the plateau ends around epoch 60), which fits the vanishing-gradient explanation: a bigger step size helps, and an extra layer adds another 0.25 factor.
-
-**Learning rate.** 0.1 beat 0.01 on average (0.917 vs 0.849). Because we use plain SGD with no momentum, the learning rate is exactly the step size, and with 0.01 the tanh/relu models were still improving at epoch 200 (their MSE curves are still going down), while with 0.1 they converged within about 25 epochs. On this small, well-conditioned dataset 0.1 did not cause instability.
-
-**Epochs.** 200 epochs beat 100 on average (0.890 vs 0.877). The gain comes almost entirely from the slow-learning lr = 0.01 models. For lr = 0.1 the extra epochs gave no improvement, and the test MSE of the tanh lr = 0.1 models rose slightly after about epoch 50 (2 layers: 0.0174 at epoch 100 → 0.0229 at epoch 200) while train MSE kept falling. That is mild overfitting.
-
-**Hidden layers.** 2 layers beat 3 on average (0.909 vs 0.857), but that difference comes from the sigmoid models (vanishing gradients get worse with depth). For tanh and relu, 2 and 3 layers performed about the same, since the dataset is small and nearly linearly separable, so the extra capacity isn't needed.
-
-**Overfitting.** The good models have a train/test accuracy gap of only about 1–2 points (e.g. 0.993 train vs 0.982 test), so overfitting is small. It shows up mainly in the slight rise in test MSE described above.
-
-**Summary.** For this dataset, tanh or relu with learning rate 0.1 and 2 hidden layers is enough to reach about 98% test accuracy within 100 epochs. Sigmoid needs a larger learning rate and a shallower network to train at all.
-
-## Assumptions
-- **Dataset:** Breast Cancer Wisconsin (Diagnostic) from the UCI repository, read from its public URL. `ID` is dropped because it is a sample identifier, not a feature.
-- **Hyperparameter grid:** the one provided in the starter code's `train_evaluate`: activations `logistic`, `tanh`, `relu`; learning rates 0.01 and 0.1; 100 and 200 epochs; 2 and 3 hidden layers.
-- **Hidden layer width:** 16 neurons in every hidden layer (the template allows any fixed number).
-- **Optimizer:** plain stochastic gradient descent (`solver='sgd'`, `momentum=0`), so the learning rate is the step size η. scikit-learn's defaults otherwise apply (mini-batch size 200, L2 penalty α = 0.0001, constant learning rate).
-- **Epochs:** one epoch is one full pass over the training set, done with one `partial_fit` call. Each model is trained for exactly that many epochs, with no early stopping.
-- **Split:** 80/20 train/test, stratified by class, with random seed 42. The same seed initializes the network weights, so results are reproducible.
-- **Standardization:** `StandardScaler` fit on the training set only, then applied to both sets.
-- **Missing values:** filled with the column median computed over the whole dataset before the split. This is a minor theoretical leak, but the dataset has no missing values, so it has no effect.
-- **Errors:** MSE is computed between the true label (0/1) and the predicted probability of malignant. Log-loss is also reported. Accuracy uses a 0.5 threshold.
-- **Label encoding:** malignant = 1, benign = 0.
+For MSE vs epoch (100-epoch), each 100-epoch model uses the same seed as its 200-epoch counterpart, so its curve is identical for the first 100 epochs and lies underneath the solid line. The dot at epoch 100 marks where the 100-epoch model stopped.
 
 ## References
 - UCI ML Repository, Breast Cancer Wisconsin (Diagnostic) dataset
