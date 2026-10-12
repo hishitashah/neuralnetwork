@@ -73,14 +73,17 @@ class NeuralNet:
         # to remove duplicate rows
         n = len(data)
         data = data.drop_duplicates()
+        print(f"Duplicate rows removed: {n - len(data)}")
 
         n = len(data)
         data['Diagnosis'] = data['Diagnosis'].astype(str).str.strip().str.upper()
         data = data[data['Diagnosis'].isin(['M', 'B'])]
+        print(f"Rows with missing/invalid label removed: {n - len(data)}")
 
         # Nulls in features are replaced wiith feature median
         n_null = int(data[feature_cols].isnull().sum().sum())
         data[feature_cols] = data[feature_cols].fillna(data[feature_cols].median())
+        print(f"Missing feature values imputed with median: {n_null}")
 
         # M (malignant) = 1, B (benign) = 0
         data['Diagnosis'] = data['Diagnosis'].map({'M': 1, 'B': 0})

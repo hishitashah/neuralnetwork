@@ -27,7 +27,7 @@ python NeuralNet.py
 python NeuralNet.py --data path/to/wdbc.data
 ```
 
-The run takes about 10–15 seconds. It prints the preprocessing summary, one line per trained model, the full results table, the best model, and the mean test accuracy for each hyperparameter value. The outputs are written to `results/`:
+The run takes about 10–15 seconds. It prints the data-cleaning counts (duplicate rows removed, rows with an invalid label removed, missing values filled), the train/test sizes, one line per trained model, the full results table, the best model, and the mean test accuracy for each hyperparameter value. The outputs are written to `results/`:
 
 | File | Contents |
 |---|---|
@@ -38,7 +38,6 @@ The run takes about 10–15 seconds. It prints the preprocessing summary, one li
 ## Modifications to the template
 - `__main__` reads the data path from the `--data` command-line argument instead of a hardcoded `"train.csv"`.
 - `__init__` now uses the `header` flag (`header=False` for wdbc.data) and assigns the column names.
-- `__init__` prints a quick summary of the loaded data: shape, class counts, and null count.
 - `preprocess` drops `ID`, coerces features to numeric (`?`/blank become NaN), removes duplicates and rows with an invalid label, imputes missing features with the column median, encodes `Diagnosis` as M = 1 / B = 0, and moves it to the last column.
 - `preprocess` also does the train/test split and then standardizes the features (`StandardScaler`). The split happens first so the scaler is fit on the training set only and no test data leaks into training. It stores the standardized `X_train`, `X_test`, `y_train`, `y_test`, which `train_evaluate` uses directly instead of splitting the data itself.
 - `__init__` takes optional `seed` (42), `test_size` (0.2), `neurons` (16) and `out_dir` (`"results"`) arguments.
