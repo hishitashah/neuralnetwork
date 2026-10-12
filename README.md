@@ -27,15 +27,9 @@ python NeuralNet.py
 python NeuralNet.py --data path/to/wdbc.data
 ```
 
-The run takes about 10–15 seconds. It prints the data-cleaning counts (duplicate rows removed, rows with an invalid label removed, missing values filled), the train/test sizes, one line per trained model, the full results table, the best model, and the mean test accuracy for each hyperparameter value. The outputs are written to `results/`:
+The run prints the data-cleaning counts (duplicate rows removed, rows with an invalid label removed, missing values filled), the train/test sizes, one line per trained model, the full results table, the best model, and the mean test accuracy for each hyperparameter value. 
 
-| File | Contents |
-|---|---|
-| `results/results.csv` / `results/results.md` | Results table for all 24 models, sorted by test accuracy |
-| `results/history_acc.png` | Model history: train and test accuracy vs epoch for every model |
-| `results/history_mse.png` | Model history: train and test MSE vs epoch for every model |
-
-## Modifications to the template
+## Changes to template
 - `__main__` reads the data path from the `--data` command-line argument instead of a hardcoded `"train.csv"`.
 - `__init__` now uses the `header` flag (`header=False` for wdbc.data) and assigns the column names.
 - `preprocess` drops `ID`, coerces features to numeric (`?`/blank become NaN), removes duplicates and rows with an invalid label, imputes missing features with the column median, encodes `Diagnosis` as M = 1 / B = 0, and moves it to the last column.
@@ -45,8 +39,7 @@ The run takes about 10–15 seconds. It prints the data-cleaning counts (duplica
 - `train_evaluate` keeps the template's hyperparameter grid and trains every combination (3 × 2 × 2 × 2 = 24 models). Two helper methods were added:
   - `train_model` trains one `MLPClassifier` one epoch at a time with `partial_fit` and records train/test accuracy, MSE and log-loss after each epoch.
   - `plots` draws the model-history plots.
-- The template asks for all models on a single plot with a different color per model. 24 lines on one axis is unreadable, so (as the assignment allows) each figure is split into three panels, one per activation function. Within a panel, color identifies the learning rate and layer count, and line style identifies the epoch count (solid = 200, dashed = 100), so each model has a unique color + style.
-- Errors are reported as MSE (as the assignment suggests) and also as log-loss.
+- Errors are reported as MSE and as log-loss.
 
 ## Results
 All 24 models, sorted by test accuracy (ties broken by test MSE). Train/test sizes are 455/114.
